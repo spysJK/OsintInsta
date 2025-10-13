@@ -26,3 +26,20 @@ class Database:
 
     def close(self):
         self.connection.close()
+    
+    def comparacao_followers(self, username):
+        self.cursor.execute('''
+            SELECT followers FROM users WHERE username = ?
+        ''', (username,))
+        result = self.cursor.fetchone()
+        if result:
+            return result[0]
+        return ""
+    def comparacao_folliwing(self, username):
+        self.cursor.execute('''
+            SELECT following FROM users WHERE username = ?
+        ''', (username,))
+        result = self.cursor.fetchone()
+        if result:
+            return result[0]
+        return ""
