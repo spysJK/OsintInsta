@@ -8,6 +8,7 @@
 
     def profile_info(username):
         profile = instaloader.Profile.from_username(l.context, username)
+        db.create_table()
         os.system("clear")
         print("Username: ", profile.username)
         print("User ID: ", profile.userid)
