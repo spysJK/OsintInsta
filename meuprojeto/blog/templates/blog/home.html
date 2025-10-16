@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Consulta de Perfil</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #007bff, #6610f2);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #222;
+        }
+
+        .card {
+            background: #fff;
+            width: 420px;
+            border-radius: 18px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+            padding: 30px;
+            animation: fadeIn 0.6s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 {
+            text-align: center;
+            color: #007bff;
+            margin-bottom: 20px;
+            font-size: 26px;
+            font-weight: 600;
+        }
+
+        form {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px 0 0 8px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        button {
+            background: #007bff;
+            border: none;
+            color: white;
+            padding: 0 18px;
+            border-radius: 0 8px 8px 0;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .results {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 10px;
+        }
+
+        .username {
+            text-align: center;
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: white;
+            padding: 12px 18px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            margin-bottom: 10px;
+        }
+
+        .info span {
+            font-weight: 500;
+            color: #555;
+        }
+
+        .info strong {
+            font-size: 18px;
+        }
+
+        .trend {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .trend i {
+            margin-right: 6px;
+        }
+
+        .up {
+            color: #28a745;
+        }
+
+        .down {
+            color: #dc3545;
+        }
+
+        .neutral {
+            color: #6c757d;
+        }
+
+        .error {
+            background: #ffe5e5;
+            color: #a00;
+            text-align: center;
+            border-radius: 10px;
+            padding: 10px;
+            margin-top: 15px;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 13px;
+            color: #666;
+            margin-top: 20px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Consulta de Perfil</h1>
+        <form method="POST">
+            {% csrf_token %}
+            <input type="text" name="username" placeholder="Digite o nome de usuário..." required>
+            <button type="submit">
+                <i data-feather="search"></i>
+            </button>
+        </form>
+
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+
+        {% if username %}
+        <div class="results">
+            <div class="username">@{{ username }}</div>
+            
+            <div class="info">
+                <span>Seguidores</span>
+                <strong>{{ followers }}</strong>
+                <div class="trend">
+                    {% if followers_message %}
+                        {% if 'aumentaram' in followers_message %}
+                            <i data-feather="arrow-up" class="up"></i>
+                            <span class="up">{{ followers_message }}</span>
+                        {% elif 'diminuíram' in followers_message %}
+                            <i data-feather="arrow-down" class="down"></i>
+                            <span class="down">{{ followers_message }}</span>
+                        {% else %}
+                            <span class="neutral">{{ followers_message }}</span>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="info">
+                <span>Seguindo</span>
+                <strong>{{ following }}</strong>
+                <div class="trend">
+                    {% if following_message %}
+                        {% if 'aumentou' in following_message %}
+                            <i data-feather="arrow-up" class="up"></i>
+                            <span class="up">{{ following_message }}</span>
+                        {% elif 'diminuiu' in following_message %}
+                            <i data-feather="arrow-down" class="down"></i>
+                            <span class="down">{{ following_message }}</span>
+                        {% else %}
+                            <span class="neutral">{{ following_message }}</span>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="footer">
+            Desenvolvido com 💙 usando Django + Instaloader
+        </div>
+    </div>
+    {% if profile_pic_url %}
+  <div style="text-align:center;">
+      <img src="{{ profile_pic_url }}" alt="Foto de perfil de {{ username }}" 
+           style="width:150px; height:150px; border-radius:50%; object-fit:cover; margin-bottom:10px;">
+  </div>
+{% endif %}
+
+
+    <script>
+        feather.replace();
+    </script>
+</body>
+</html>
