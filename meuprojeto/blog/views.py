@@ -1,66 +1,75 @@
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.utils import timezone
+from django.contrib.auth import authenticate, login
 
 from scraping import profile_info
 from database import Database
-from django.contrib import messages 
-from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login
 
 db = Database()
+db.create_table()
+
 def home(request):
+    context = {}
     if request.method == "POST":
-        username = request.POST.get("username")
-        db.create_table()
+        username = request.POST.get("username", "").strip()
+        if not username:
+            context["error"] = "Digite um nome de usuário válido."
+            return render(request, "blog/home.html", context)
+
         try:
             profile_data = profile_info(username)
-            if not profile_data:
-                raise ValueError("profile_info não retornou dados")
         except Exception as e:
-            # Exibe erro amigável no template
-            return render(request, "blog/home.html", {
-                "error": f"Erro ao buscar perfil: {e}"
-            })
+            context["error"] = str(e)
+            return render(request, "blog/home.html", context)
 
-        profile_pic_path = profile_data.get("profile_pic_path")  # pode ser None
-        followers = profile_data.get("followers")
-        following = profile_data.get("following")
+        followers = profile_data.get("followers", 0)
+        following = profile_data.get("following", 0)
+        bio = profile_data.get("bio", "")
+        profile_pic_path = profile_data.get("profile_pic_path")
 
-        previous_followers = db.comparacao_followers(username)
-        previous_following = db.comparacao_folliwing(username)
+        old_user = db.get_user(username)
+        db.add_or_update_user(username, followers, following)
 
         followers_message = ""
         following_message = ""
 
-        if previous_followers != "":
-            diff = followers - previous_followers
-            if diff > 0:
-                followers_message = f"{diff} seguidores"
-            elif diff < 0:
-                followers_message = f"{diff} seguidores a menos"
+        if old_user:
+            diff = db.compare_user(username, followers, following)
+            if diff["diff_followers"] > 0:
+                followers_message = f"+{diff['diff_followers']} seguidores"
+            elif diff["diff_followers"] < 0:
+                followers_message = f"{abs(diff['diff_followers'])} seguidores a menos"
             else:
                 followers_message = "Seguidores sem mudança"
 
-        if previous_following != "":
-            diff = following - previous_following
-            if diff > 0:
-                following_message = f"👣 +{diff} seguindo"
-            elif diff < 0:
-                following_message = f"{abs(diff)} seguindo a menos"
+            if diff["diff_following"] > 0:
+                following_message = f"+{diff['diff_following']} seguindo"
+            elif diff["diff_following"] < 0:
+                following_message = f"{abs(diff['diff_following'])} seguindo a menos"
             else:
                 following_message = "Seguindo sem mudança"
+        else:
+            followers_message = "Novo usuário cadastrado!"
+            following_message = ""
 
-        context = {
+        context.update({
             "username": username,
             "profile_pic_path": profile_pic_path,
             "followers": followers,
             "following": following,
+            "bio": bio,
             "followers_message": followers_message,
             "following_message": following_message,
-              "profile_pic_path": profile_data.get("profile_pic_path"),  # <- importante!
-        }
+            "history": db.list_users(limit=6),
+            "now": timezone.now(),
+        })
 
-        return render(request, "blog/home.html", context)
+    else:
+        context["history"] = db.list_users(limit=6)
+        context["now"] = timezone.now()
 
-    return render(request, "blog/home.html")
+    return render(request, "blog/home.html", context)
 
 
 def login_view(request):
@@ -70,8 +79,7 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            return redirect('home')
+            return redirect("home")
         else:
             messages.error(request, "Usuário ou senha inválidos")
-
     return render(request, "blog/login.html")

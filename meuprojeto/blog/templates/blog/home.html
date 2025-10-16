@@ -24,12 +24,13 @@
 
         .card {
             background: #fff;
-            width: 420px;
-            border-radius: 20px;
+            width: 440px;
+            border-radius: 22px;
             box-shadow: 0 8px 25px rgba(0,0,0,0.15);
             padding: 30px;
             text-align: center;
             animation: fadeIn 0.6s ease-in-out;
+            position: relative;
         }
 
         @keyframes fadeIn {
@@ -57,6 +58,13 @@
             border-radius: 8px 0 0 8px;
             font-size: 14px;
             outline: none;
+            border-color: #201c1c79;
+            transition: 0.3s;
+        }
+
+        input[type="text"]:focus {
+            border-color: #2575fc;
+            box-shadow: 0 0 6px rgba(37,117,252,0.4);
         }
 
         button {
@@ -94,6 +102,22 @@
             font-weight: 600;
             color: #333;
             margin-top: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .refresh-btn {
+            background: none;
+            border: none;
+            color: #2575fc;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .refresh-btn:hover {
+            transform: rotate(120deg);
         }
 
         .bio {
@@ -136,9 +160,14 @@
             margin-top: 4px;
         }
 
-        .up { color: #28a745; }
-        .down { color: #dc3545; }
+        .up { color: #28a745; animation: pulse 1s infinite alternate; }
+        .down { color: #dc3545; animation: pulse 1s infinite alternate; }
         .neutral { color: #6c757d; }
+
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.2); }
+        }
 
         .error {
             background: #ffe5e5;
@@ -155,13 +184,49 @@
             color: #666;
             margin-top: 25px;
         }
+
+        /* Histórico */
+        .history {
+            background: #f9f9ff;
+            border-radius: 12px;
+            margin-top: 25px;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .history h3 {
+            color: #2575fc;
+            font-size: 15px;
+            margin-bottom: 8px;
+        }
+
+        .history ul {
+            list-style: none;
+            max-height: 110px;
+            overflow-y: auto;
+        }
+
+        .history li {
+            padding: 4px 0;
+            font-size: 13px;
+            color: #444;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+   
+        
     </style>
 </head>
 <body>
     <div class="card">
+     
+     
+
         <h1>Consulta de Perfil</h1>
 
-        <form method="POST">
+        <form method="POST" onsubmit="showLoader()">
             {% csrf_token %}
             <input type="text" name="username" placeholder="Digite o nome de usuário..." required>
             <button type="submit">
@@ -181,7 +246,13 @@
                 <img src="https://cdn-icons-png.flaticon.com/512/847/847969.png" alt="Sem imagem" class="profile-pic">
             {% endif %}
 
-            <div class="username">@{{ username }}</div>
+            <div class="username">
+                @{{ username }}
+                <button type="button" class="refresh-btn" onclick="refreshUser('{{ username }}')">
+  
+                </button>
+            </div>
+
             {% if bio %}
                 <div class="bio">{{ bio }}</div>
             {% endif %}
@@ -226,13 +297,26 @@
         </div>
         {% endif %}
 
+        {% if history %}
+        <div class="history">
+            <h3>🔎 Últimas buscas</h3>
+            <ul>
+                {% for user in history %}
+                <li><i data-feather="user"></i> {{ user.username }} — {{ user.followers }} seguidores</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
         <div class="footer">
-            Desenvolvido com 💙 Django + Instaloader
+            Feito com ❤️ por você — {{ now|date:"d/m/Y" }}
         </div>
     </div>
 
     <script>
         feather.replace();
+
+
     </script>
 </body>
 </html>

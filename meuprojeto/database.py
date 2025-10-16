@@ -2,14 +2,12 @@ import sqlite3
 from threading import Lock
 
 class Database:
-    _lock = Lock()  # garante segurança de acesso simultâneo
+    _lock = Lock()
 
     def __init__(self, db_name='app.db'):
         self.db_name = db_name
 
     def connect(self):
-        """Abre uma nova conexão segura por operação"""
-        # check_same_thread=False permite acesso entre threads
         return sqlite3.connect(self.db_name, check_same_thread=False)
 
     def create_table(self):
@@ -19,7 +17,7 @@ class Database:
                 cursor.execute('''
                     CREATE TABLE IF NOT EXISTS users (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        username TEXT NOT NULL,
+                        username TEXT NOT NULL UNIQUE,
                         followers INTEGER,
                         following INTEGER,
                         date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -27,51 +25,51 @@ class Database:
                 ''')
                 conn.commit()
 
-    def add_user(self, username, followers, following):
+    # adiciona ou atualiza automaticamente
+    def add_or_update_user(self, username, followers, following):
         with Database._lock:
             with self.connect() as conn:
                 cursor = conn.cursor()
-                cursor.execute('''
+                cursor.execute("""
                     INSERT INTO users (username, followers, following)
                     VALUES (?, ?, ?)
-                ''', (username, followers, following))
+                    ON CONFLICT(username) DO UPDATE SET
+                        followers = excluded.followers,
+                        following = excluded.following,
+                        date_added = CURRENT_TIMESTAMP
+                """, (username, followers, following))
                 conn.commit()
 
-    def comparacao_followers(self, username):
-        with self.connect() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT followers FROM users WHERE username = ?', (username,))
-            result = cursor.fetchone()
-            return result[0] if result else ""
-
-    def comparacao_folliwing(self, username):
-        with self.connect() as conn:
-            cursor = conn.cursor()
-            cursor.execute('SELECT following FROM users WHERE username = ?', (username,))
-            result = cursor.fetchone()
-            return result[0] if result else ""
-    def get_latest_followers(self, username):
+    def get_user(self, username):
         with self.connect() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT followers
-                FROM users
-                WHERE username = ?
-                ORDER BY date_added DESC
-                LIMIT 1
+                SELECT username, followers, following, date_added
+                FROM users WHERE username = ?
+                ORDER BY date_added DESC LIMIT 1
             """, (username,))
             result = cursor.fetchone()
-            return result[0] if result else 0
+            if result:
+                return {"username": result[0], "followers": result[1], "following": result[2], "date": result[3]}
+            return None
 
-    def get_latest_following(self, username):
+    def compare_user(self, username, followers, following):
+        old = self.get_user(username)
+        if not old:
+            return {"diff_followers": 0, "diff_following": 0}
+        return {
+            "diff_followers": followers - old["followers"],
+            "diff_following": following - old["following"],
+        }
+
+    def list_users(self, limit=10):
         with self.connect() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT following
+                SELECT username, followers, following, date_added
                 FROM users
-                WHERE username = ?
                 ORDER BY date_added DESC
-                LIMIT 1
-            """, (username,))
-            result = cursor.fetchone()
-            return result[0] if result else 0
+                LIMIT ?
+            """, (limit,))
+            rows = cursor.fetchall()
+            return [{"username": r[0], "followers": r[1], "following": r[2], "date": r[3]} for r in rows]
