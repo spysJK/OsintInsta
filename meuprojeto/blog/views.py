@@ -9,19 +9,20 @@ db = Database()
 def home(request):
     if request.method == "POST":
         username = request.POST.get("username")
-
         db.create_table()
         try:
             profile_data = profile_info(username)
+            if not profile_data:
+                raise ValueError("profile_info não retornou dados")
         except Exception as e:
+            # Exibe erro amigável no template
             return render(request, "blog/home.html", {
                 "error": f"Erro ao buscar perfil: {e}"
             })
 
-        # extrai dados do scraping
-        profile_pic_url = profile_data.get("profile_pic_url")
-        current_followers = profile_data.get("followers")
-        current_following = profile_data.get("following")
+        profile_pic_path = profile_data.get("profile_pic_path")  # pode ser None
+        followers = profile_data.get("followers")
+        following = profile_data.get("following")
 
         previous_followers = db.comparacao_followers(username)
         previous_following = db.comparacao_folliwing(username)
@@ -30,16 +31,16 @@ def home(request):
         following_message = ""
 
         if previous_followers != "":
-            diff = current_followers - previous_followers
+            diff = followers - previous_followers
             if diff > 0:
-                followers_message = f"🔼 +{diff} seguidores"
+                followers_message = f"{diff} seguidores"
             elif diff < 0:
-                followers_message = f"🔽 {abs(diff)} seguidores a menos"
+                followers_message = f"{diff} seguidores a menos"
             else:
                 followers_message = "Seguidores sem mudança"
 
         if previous_following != "":
-            diff = current_following - previous_following
+            diff = following - previous_following
             if diff > 0:
                 following_message = f"👣 +{diff} seguindo"
             elif diff < 0:
@@ -49,11 +50,12 @@ def home(request):
 
         context = {
             "username": username,
-            "profile_pic_url": profile_pic_url,  # 👈 adicionamos aqui
-            "followers": current_followers,
-            "following": current_following,
+            "profile_pic_path": profile_pic_path,
+            "followers": followers,
+            "following": following,
             "followers_message": followers_message,
             "following_message": following_message,
+              "profile_pic_path": profile_data.get("profile_pic_path"),  # <- importante!
         }
 
         return render(request, "blog/home.html", context)
